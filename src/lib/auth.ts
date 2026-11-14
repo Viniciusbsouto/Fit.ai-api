@@ -31,7 +31,7 @@ export const auth = betterAuth({
         crossSubDomainCookies: {
           enabled: true,
           domain:
-            env.NODE_ENV === 'production' ? '.viniciusbsout.com.br' : undefined,
+            env.COOKIE_DOMAIN,
         },
       }
     : undefined,
