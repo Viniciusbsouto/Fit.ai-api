@@ -114,6 +114,7 @@ app.withTypeProvider<ZodTypeProvider>().route({
   method: "GET",
   url: "/",
   schema: {
+    operationId: "getRoot",
     description: "Hello world",
     tags: ["Hello World"],
     response: {
@@ -132,6 +133,7 @@ app.withTypeProvider<ZodTypeProvider>().route({
 app.route({
   method: ["GET", "POST"],
   url: "/api/auth/*",
+  schema: { hide: true },
   async handler(request, reply) {
     try {
       // Construct request URL
