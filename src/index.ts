@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+import { pathToFileURL } from "node:url";
+
 import fastifyCors from "@fastify/cors";
 import fastifySwagger from "@fastify/swagger";
 import fastifyApiReference from "@scalar/fastify-api-reference";
@@ -13,14 +15,37 @@ import {
 import z from "zod";
 
 import { auth } from "./lib/auth.js";
+import { env } from "./lib/env.js";
 import { aiRoutes } from "./routes/ai.js";
 import { homeRoutes } from "./routes/home.js";
 import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
 import { workoutPlanRoutes } from "./routes/workout-plan.js";
 
-const app = Fastify({
-  logger: true,
+export const app = Fastify({
+  logger:
+    env.NODE_ENV === "test"
+      ? false
+      : {
+          level: env.NODE_ENV === "development" ? "debug" : "info",
+          // OAuth codes appear in callback query strings. Do not log URLs or credentials.
+          redact: [
+            "req.headers.authorization",
+            "req.headers.cookie",
+            "res.headers['set-cookie']",
+          ],
+          serializers: {
+            req: (request) => ({
+              method: request.method,
+              remoteAddress: request.ip,
+            }),
+            err: (error) => ({
+              type: error.name,
+              message: "Internal server error",
+              stack: "",
+            }),
+          },
+        },
 });
 
 app.setValidatorCompiler(validatorCompiler);
@@ -35,8 +60,8 @@ await app.register(fastifySwagger, {
     },
     servers: [
       {
-        description: "Localhost",
-        url: process.env.BETTER_AUTH_URL || "http://localhost:8081",
+        description: "API Base URL",
+        url: env.API_BASE_URL,
       },
     ],
   },
@@ -44,7 +69,7 @@ await app.register(fastifySwagger, {
 });
 
 await app.register(fastifyCors, {
-  origin: ["http://localhost:3000"],
+  origin: [env.WEB_APP_BASE_URL],
   credentials: true,
 });
 
@@ -110,7 +135,7 @@ app.route({
   async handler(request, reply) {
     try {
       // Construct request URL
-      const url = new URL(request.url, `http://${request.headers.host}`);
+      const url = new URL(request.url, env.API_BASE_URL);
 
       // Convert Fastify headers to standard Headers object
       const headers = new Headers();
@@ -133,8 +158,8 @@ app.route({
       const cookies = response.headers.getSetCookie();
       if (cookies.length) reply.header("set-cookie", cookies);
       reply.send(response.body ? await response.text() : null);
-    } catch (error) {
-      app.log.error(error);
+    } catch {
+      app.log.error("Internal authentication error");
       reply.status(500).send({
         error: "Internal authentication error",
         code: "AUTH_FAILURE",
@@ -143,9 +168,14 @@ app.route({
   },
 });
 
-try {
-  await app.listen({ port: Number(process.env.PORT) || 8081 });
-} catch (err) {
-  app.log.error(err);
-  process.exit(1);
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  try {
+    await app.listen({ host: "0.0.0.0", port: env.PORT });
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
 }

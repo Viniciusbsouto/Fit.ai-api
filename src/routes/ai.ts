@@ -13,14 +13,15 @@ import z from 'zod';
 
 import { WeekDay } from '../generated/prisma/enums.js';
 import { auth } from '../lib/auth.js';
+import { env } from '../lib/env.js';
 import { CreateWorkoutPlan } from '../usecases/CreateWorkoutPlan.js';
 import { GetUserTrainData } from '../usecases/GetUserTrainData.js';
 import { ListWorkoutPlans } from '../usecases/ListWorkoutPlans.js';
 import { UpsertUserTrainData } from '../usecases/UpsertUserTrainData.js';
 
 const anthropic = createAnthropic({
-  baseURL: process.env.ANTHROPIC_BASE_URL,
-  authToken: process.env.ANTHROPIC_AUTH_TOKEN,
+  baseURL: env.ANTHROPIC_BASE_URL,
+  authToken: env.ANTHROPIC_AUTH_TOKEN,
 });
 
 const SYSTEM_PROMPT = `Você é um personal trainer virtual especialista em montagem de planos de treino personalizados.
@@ -96,7 +97,7 @@ export const aiRoutes = async (app: FastifyInstance) => {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      if (!process.env.ANTHROPIC_AUTH_TOKEN) {
+      if (!env.ANTHROPIC_AUTH_TOKEN) {
         return reply.status(503).send({
           error: 'Token de autenticação da IA não configurado',
         });
@@ -106,6 +107,8 @@ export const aiRoutes = async (app: FastifyInstance) => {
       const { messages } = request.body as { messages: UIMessage[] };
 
       const result = streamText({
+        // The SDK's default handler logs raw upstream errors; keep gateway data private.
+        onError: () => app.log.warn('Coach IA gateway request failed'),
         model: anthropic('claude-haiku-4-5'),
         system: SYSTEM_PROMPT,
         messages: await convertToModelMessages(messages),
