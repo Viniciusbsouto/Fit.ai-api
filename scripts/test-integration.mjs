@@ -26,8 +26,8 @@ const { app } = await import("../dist/src/index.js");
 await app.ready();
 
 const valid = {
-  DATABASE_URL: process.env.DATABASE_URL,
-  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+  DATABASE_URL: env.DATABASE_URL,
+  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
 };
 
 beforeEach(() => {
@@ -289,7 +289,7 @@ test("upstream failures never expose gateway response data or use SDK raw error 
   assert.equal(response.statusCode, 200);
   assert.match(response.body, /"type":"error"/);
   assert.ok(!response.body.includes("private-upstream-sentinel"));
-  assert.ok(!response.body.includes(process.env.ANTHROPIC_AUTH_TOKEN));
+  assert.ok(!response.body.includes(env.ANTHROPIC_AUTH_TOKEN));
   assert.equal(consoleError.mock.callCount(), 0);
 });
 

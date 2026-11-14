@@ -1,6 +1,11 @@
 import "dotenv/config";
-import { createRequire } from "node:module";
+
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+
+import { env } from "prisma/config";
+
+const databaseUrl = env("DATABASE_URL");
 
 const require = createRequire(import.meta.url);
 const { Client } = require(
@@ -28,16 +33,14 @@ function prisma(args, allowedCodes = [0]) {
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL)
-    throw new Error("DATABASE_URL ausente no .env.");
-  const url = new URL(process.env.DATABASE_URL);
+  const url = new URL(databaseUrl);
   if (url.pathname !== "/bootcamp-treinos-api") {
     throw new Error(
       "O banco configurado não é bootcamp-treinos-api. Operação interrompida.",
     );
   }
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl,
     connectionTimeoutMillis: 5000,
   });
   let tables;
