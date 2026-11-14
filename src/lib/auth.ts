@@ -1,9 +1,9 @@
-import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { openAPI } from "better-auth/plugins";
+import { betterAuth } from 'better-auth';
+import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { openAPI } from 'better-auth/plugins';
 
-import { prisma } from "./db.js";
-import { env } from "./env.js";
+import { prisma } from './db.js';
+import { env } from './env.js';
 
 export const auth = betterAuth({
   baseURL: env.API_BASE_URL,
@@ -13,7 +13,7 @@ export const auth = betterAuth({
     env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
       ? {
           google: {
-            prompt: "select_account",
+            prompt: 'select_account',
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
           },
@@ -23,16 +23,20 @@ export const auth = betterAuth({
     enabled: true,
   },
   database: prismaAdapter(prisma, {
-    provider: "postgresql",
+    provider: 'postgresql',
   }),
   plugins: [openAPI()],
   advanced: env.COOKIE_DOMAIN
     ? {
-        crossSubDomainCookies: { enabled: true, domain: env.COOKIE_DOMAIN },
+        crossSubDomainCookies: {
+          enabled: true,
+          domain:
+            env.NODE_ENV === 'production' ? '.viniciusbsout.com.br' : undefined,
+        },
       }
     : undefined,
   logger: {
-    disabled: env.NODE_ENV === "test",
-    level: env.NODE_ENV === "development" ? "debug" : "warn",
+    disabled: env.NODE_ENV === 'test',
+    level: env.NODE_ENV === 'development' ? 'debug' : 'warn',
   },
 });
