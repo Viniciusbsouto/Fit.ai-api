@@ -22,30 +22,44 @@ import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
 import { workoutPlanRoutes } from "./routes/workout-plan.js";
 
+const loggerOptions = {
+  // OAuth codes appear in callback query strings. Do not log URLs or credentials.
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']",
+  ],
+  serializers: {
+    req: (request: { method: string; ip: string }) => ({
+      method: request.method,
+      remoteAddress: request.ip,
+    }),
+    err: (error: Error) => ({
+      type: error.name,
+      message: "Internal server error",
+      stack: "",
+    }),
+  },
+};
+
+const envToLogger = {
+  development: {
+    ...loggerOptions,
+    level: "debug",
+    transport: {
+      target: "pino-pretty",
+      options: {
+        translateTime: "HH:MM:ss Z",
+        ignore: "pid,hostname",
+      },
+    },
+  },
+  production: { ...loggerOptions, level: "info" },
+  test: false,
+};
+
 export const app = Fastify({
-  logger:
-    env.NODE_ENV === "test"
-      ? false
-      : {
-          level: env.NODE_ENV === "development" ? "debug" : "info",
-          // OAuth codes appear in callback query strings. Do not log URLs or credentials.
-          redact: [
-            "req.headers.authorization",
-            "req.headers.cookie",
-            "res.headers['set-cookie']",
-          ],
-          serializers: {
-            req: (request) => ({
-              method: request.method,
-              remoteAddress: request.ip,
-            }),
-            err: (error) => ({
-              type: error.name,
-              message: "Internal server error",
-              stack: "",
-            }),
-          },
-        },
+  logger: envToLogger[env.NODE_ENV],
 });
 
 app.setValidatorCompiler(validatorCompiler);
